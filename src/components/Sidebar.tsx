@@ -12,7 +12,7 @@ interface SidebarProps {
 
 export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpdated }: SidebarProps) {
   const active = tournaments.filter(t => t.status === "started");
-  const upcoming = tournaments.filter(t => t.status === "planned");
+  const other = tournaments.filter(t => t.status !== "started");
 
   return (
     <div className="h-full flex flex-col bg-background/95 backdrop-blur-xl border-r border-border overflow-hidden">
@@ -36,11 +36,11 @@ export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpda
       <div className="grid grid-cols-2 gap-2 p-4 border-b border-border">
         <div className="glass-panel p-3 text-center">
           <div className="font-display text-xl font-bold neon-text-cyan">{active.length}</div>
-          <div className="text-[9px] text-muted-foreground tracking-wider mt-1">ACTIVE NOW</div>
+          <div className="text-[9px] text-muted-foreground tracking-wider mt-1">IN PROGRESS</div>
         </div>
         <div className="glass-panel p-3 text-center">
-          <div className="font-display text-xl font-bold neon-text-magenta">{upcoming.length}</div>
-          <div className="text-[9px] text-muted-foreground tracking-wider mt-1">UPCOMING</div>
+          <div className="font-display text-xl font-bold neon-text-magenta">{tournaments.length}</div>
+          <div className="text-[9px] text-muted-foreground tracking-wider mt-1">TOTAL</div>
         </div>
       </div>
 
@@ -62,12 +62,12 @@ export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpda
           </>
         )}
 
-        {upcoming.length > 0 && (
+        {other.length > 0 && (
           <>
             <div className="text-[10px] font-display tracking-[0.2em] text-secondary px-1 mt-4 mb-2">
-              ◆ UPCOMING
+              ◆ OTHER
             </div>
-            {upcoming.map(t => (
+            {other.map(t => (
               <TournamentCard
                 key={t.tournamentId}
                 tournament={t}
