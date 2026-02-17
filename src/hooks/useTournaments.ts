@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TournamentWithCoords, fetchTournaments } from "@/lib/matchplay";
 
-const POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 15000; // 15s since we now fetch multiple pages
 
 export function useTournaments() {
   const [tournaments, setTournaments] = useState<TournamentWithCoords[]>([]);
