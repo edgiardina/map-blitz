@@ -60,52 +60,85 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lng: numb
   return null;
 }
 
-export async function fetchTournaments(): Promise<TournamentWithCoords[]> {
+// League-like types to exclude
+const LEAGUE_TYPES = new Set(["best_game", "card_best_game"]);
+
+// Max tournament duration in days before we consider it a league
+const MAX_TOURNAMENT_DAYS = 7;
+
+function isLikelyLeague(t: Tournament): boolean {
+  // Exclude known league formats
+  if (LEAGUE_TYPES.has(t.type)) return true;
+  
+  // Exclude tournaments spanning more than MAX_TOURNAMENT_DAYS
+  if (t.startUtc && t.endUtc) {
+    const start = new Date(t.startUtc).getTime();
+    const end = new Date(t.endUtc).getTime();
+    const durationDays = (end - start) / (1000 * 60 * 60 * 24);
+    if (durationDays > MAX_TOURNAMENT_DAYS) return true;
+  }
+  
+  return false;
+}
+
+async function fetchAllPages(): Promise<Tournament[]> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  // Build date range: now to 7 days from now
-  const now = new Date();
-  const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const dateInterval = `${now.toISOString()};${weekLater.toISOString()}`;
+  let allTournaments: Tournament[] = [];
+  let page = 1;
+  let lastPage = 1;
 
-  const params = new URLSearchParams({
-    endpoint: 'tournaments',
-    status: 'started',
-    dateInterval,
-    sortAsc: 'true',
-    page: '1',
-  });
+  do {
+    const params = new URLSearchParams({
+      endpoint: 'tournaments',
+      status: 'started',
+      sortAsc: 'true',
+      page: String(page),
+    });
 
-  const response = await fetch(
-    `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?${params.toString()}`,
-    {
-      headers: {
-        'apikey': apiKey,
-        'Content-Type': 'application/json',
-      },
+    const response = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?${params.toString()}`,
+      {
+        headers: {
+          'apikey': apiKey,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch tournaments: ${response.status}`);
     }
-  );
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch tournaments: ${response.status}`);
-  }
+    const json = await response.json();
+    const tournaments: Tournament[] = json?.data || [];
+    allTournaments = allTournaments.concat(tournaments);
 
-  const json = await response.json();
-  const tournaments: Tournament[] = json?.data || [];
+    // Get pagination info
+    if (json?.meta?.last_page) {
+      lastPage = json.meta.last_page;
+    }
 
-  // Filter to tournaments with locations
-  const withLocations = tournaments.filter(t => t.location);
+    page++;
+  } while (page <= lastPage);
+
+  return allTournaments;
+}
+
+export async function fetchTournaments(): Promise<TournamentWithCoords[]> {
+  const tournaments = await fetchAllPages();
+
+  // Filter out leagues and tournaments without locations
+  const withLocations = tournaments.filter(t => t.location && !isLikelyLeague(t));
 
   const results: TournamentWithCoords[] = [];
 
   for (const t of withLocations) {
-    // Use lat/lng from API if available
     if (t.location!.lat != null && t.location!.lng != null) {
       results.push({ ...t, lat: t.location!.lat, lng: t.location!.lng });
       continue;
     }
-    // Fallback to geocoding the address
     if (t.location!.address) {
       const coords = await geocodeAddress(t.location!.address);
       if (coords) {
