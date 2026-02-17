@@ -64,8 +64,21 @@ export async function fetchTournaments(): Promise<TournamentWithCoords[]> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+  // Build date range: now to 7 days from now
+  const now = new Date();
+  const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const dateInterval = `${now.toISOString()};${weekLater.toISOString()}`;
+
+  const params = new URLSearchParams({
+    endpoint: 'tournaments',
+    status: 'started',
+    dateInterval,
+    sortAsc: 'true',
+    page: '1',
+  });
+
   const response = await fetch(
-    `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=tournaments`,
+    `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?${params.toString()}`,
     {
       headers: {
         'apikey': apiKey,
@@ -81,10 +94,8 @@ export async function fetchTournaments(): Promise<TournamentWithCoords[]> {
   const json = await response.json();
   const tournaments: Tournament[] = json?.data || [];
 
-  // Filter to non-completed tournaments with locations
-  const withLocations = tournaments.filter(
-    t => t.location && t.status !== 'completed'
-  );
+  // Filter to tournaments with locations
+  const withLocations = tournaments.filter(t => t.location);
 
   const results: TournamentWithCoords[] = [];
 
