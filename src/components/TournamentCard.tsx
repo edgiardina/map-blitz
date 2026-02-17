@@ -1,3 +1,4 @@
+import { ExternalLink } from "lucide-react";
 import { TournamentWithCoords } from "@/lib/matchplay";
 
 interface TournamentCardProps {
@@ -45,9 +46,9 @@ export function TournamentCard({ tournament, isSelected, onClick }: TournamentCa
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="text-[9px] font-mono text-primary hover:text-primary/80 underline underline-offset-2"
+            className="inline-flex items-center gap-0.5 text-[9px] font-display tracking-wider text-muted-foreground hover:text-primary transition-colors"
           >
-            VIEW
+            VIEW <ExternalLink size={8} />
           </a>
           <span className={`text-[9px] font-display font-bold tracking-wider ${
             tournament.status === "started" ? "neon-text-cyan" : "text-secondary"
