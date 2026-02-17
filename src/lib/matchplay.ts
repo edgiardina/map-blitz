@@ -85,10 +85,11 @@ async function fetchAllPages(): Promise<Tournament[]> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  // Build dateInterval: from now to 8 days ahead
+  // Build dateInterval: today at 05:00 UTC to 8 days later at 04:59:59.999 UTC
   const now = new Date();
-  const weekLater = new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000);
-  const dateInterval = `${now.toISOString()};${weekLater.toISOString()}`;
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 5, 0, 0, 0));
+  const end = new Date(start.getTime() + 8 * 24 * 60 * 60 * 1000 - 1);
+  const dateInterval = `${start.toISOString()};${end.toISOString()}`;
 
   let allTournaments: Tournament[] = [];
   let page = 1;
