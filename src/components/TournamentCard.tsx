@@ -39,11 +39,22 @@ export function TournamentCard({ tournament, isSelected, onClick }: TournamentCa
         <span className="text-[9px] font-mono text-muted-foreground">
           {formatType(tournament.type)}
         </span>
-        <span className={`text-[9px] font-display font-bold tracking-wider ${
-          tournament.status === "started" ? "neon-text-cyan" : "text-secondary"
-        }`}>
-          {tournament.status.toUpperCase()}
-        </span>
+        <div className="flex items-center gap-2">
+          <a
+            href={`https://app.matchplay.events/tournaments/${tournament.tournamentId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-[9px] font-mono text-primary hover:text-primary/80 underline underline-offset-2"
+          >
+            VIEW
+          </a>
+          <span className={`text-[9px] font-display font-bold tracking-wider ${
+            tournament.status === "started" ? "neon-text-cyan" : "text-secondary"
+          }`}>
+            {tournament.status.toUpperCase()}
+          </span>
+        </div>
       </div>
     </button>
   );
