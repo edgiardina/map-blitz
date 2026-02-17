@@ -60,16 +60,10 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lng: numb
   return null;
 }
 
-// League-like types to always exclude
-const LEAGUE_TYPES = new Set(["best_game", "card_best_game"]);
-
 // Max tournament duration in days before we consider it a league
 const MAX_TOURNAMENT_DAYS = 3;
 
 function isLikelyLeague(t: Tournament): boolean {
-  // Exclude known league formats
-  if (LEAGUE_TYPES.has(t.type)) return true;
-  
   // Exclude tournaments spanning more than MAX_TOURNAMENT_DAYS
   if (t.startUtc && t.endUtc) {
     const start = new Date(t.startUtc).getTime();
