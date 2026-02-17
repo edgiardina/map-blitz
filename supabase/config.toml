@@ -1,1 +1,4 @@
 project_id = "qpkttbqlptubkdmlrjtz"
+
+[functions.matchplay-proxy]
+verify_jwt = false
