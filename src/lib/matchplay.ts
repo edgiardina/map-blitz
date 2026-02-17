@@ -77,10 +77,6 @@ function isLikelyLeague(t: Tournament): boolean {
     const durationDays = (end - start) / (1000 * 60 * 60 * 24);
     if (durationDays > MAX_TOURNAMENT_DAYS) return true;
   }
-
-  // Exclude if name contains league-like keywords
-  const name = t.name.toLowerCase();
-  if (name.includes('league') || name.includes('season') || name.includes('selfie')) return true;
   
   return false;
 }
@@ -88,6 +84,11 @@ function isLikelyLeague(t: Tournament): boolean {
 async function fetchAllPages(): Promise<Tournament[]> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  // Build dateInterval: from now to 8 days ahead
+  const now = new Date();
+  const weekLater = new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000);
+  const dateInterval = `${now.toISOString()};${weekLater.toISOString()}`;
 
   let allTournaments: Tournament[] = [];
   let page = 1;
@@ -97,6 +98,7 @@ async function fetchAllPages(): Promise<Tournament[]> {
     const params = new URLSearchParams({
       endpoint: 'tournaments',
       status: 'started',
+      dateInterval,
       sortAsc: 'true',
       page: String(page),
     });
