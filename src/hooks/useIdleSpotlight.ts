@@ -20,54 +20,61 @@ export interface SpotlightPlayer {
 
 async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promise<SpotlightPlayer | null> {
   try {
+    // Use the public standings endpoint (no owner restriction)
     const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=tournaments/${tournament.tournamentId}/players&include=user`,
-      { method: 'POST', headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
+      `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=tournaments/${tournament.tournamentId}/standings`,
+      { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
     );
     if (!res.ok) return null;
     const json = await res.json();
     const players: any[] = json?.data || [];
 
-    // Sort by position (ascending) and find first player with an ifpaId
-    const sorted = [...players].sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
-    const top = sorted.find(p => p.user?.ifpaId) || sorted[0];
+    if (players.length === 0) return null;
+
+    // standings are already sorted by position; pick first with a userId
+    const top = players.find(p => p.userId) || players[0];
     if (!top) return null;
 
-    const ifpaId: number | null = top.user?.ifpaId ?? null;
+    const userId: number | null = top.userId ?? null;
+    let ifpaId: number | null = null;
     let worldRank: number | null = null;
     let countryRank: number | null = null;
     let stateRank: number | null = null;
-    let country: string | null = top.user?.flag ?? null;
-    let avatar: string | null = top.user?.avatar ?? null;
+    let country: string | null = top.flag ?? null;
+    let avatar: string | null = top.avatar ?? null;
+    let name: string = top.name ?? "Unknown Player";
 
-    // Fetch IFPA data if we have an ifpaId
-    if (ifpaId) {
+    // Fetch user profile from Matchplay (includes IFPA data) if we have a userId
+    if (userId) {
       try {
-        const ifpaRes = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/ifpa-proxy?ifpaId=${ifpaId}`,
+        const userRes = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=users/${userId}&includeIfpa=1`,
           { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
         );
-        if (ifpaRes.ok) {
-          const ifpaJson = await ifpaRes.json();
-          const player = ifpaJson?.player;
-          if (player) {
-            worldRank = parseInt(player.rankings?.world_rank) || null;
-            countryRank = parseInt(player.rankings?.country_rank) || null;
-            stateRank = parseInt(player.rankings?.state_rank) || null;
-            country = player.country_code ?? country;
-            // Use IFPA photo if available and Matchplay avatar is missing
-            if (!avatar && player.player_photo_url) {
-              avatar = player.player_photo_url;
-            }
+        if (userRes.ok) {
+          const userJson = await userRes.json();
+          const user = userJson?.user;
+          const ifpa = userJson?.ifpa;
+          if (user) {
+            name = user.name ?? name;
+            avatar = user.avatar ?? avatar;
+            country = user.flag ?? country;
+            ifpaId = user.ifpaId ?? null;
+          }
+          if (ifpa) {
+            worldRank = ifpa.rank ?? null;
+            countryRank = ifpa.countryRank ?? null;
+            stateRank = ifpa.stateRank ?? null;
+            country = ifpa.countryCode ?? country;
           }
         }
       } catch {
-        // IFPA fetch failed — use Matchplay data only
+        // User fetch failed — use standings data only
       }
     }
 
     return {
-      name: top.user?.name ?? top.name ?? "Unknown Player",
+      name,
       ifpaId,
       avatar,
       worldRank,
