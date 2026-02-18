@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { TournamentWithCoords } from "@/lib/matchplay";
+
+export interface TournamentMapHandle {
+  fitAll: () => void;
+}
 
 interface TournamentMapProps {
   tournaments: TournamentWithCoords[];
@@ -56,11 +60,24 @@ function createPulsingIcon(status: string, isSelected: boolean) {
   });
 }
 
-export function TournamentMap({ tournaments, selectedId, onSelect }: TournamentMapProps) {
+export const TournamentMap = forwardRef<TournamentMapHandle, TournamentMapProps>(
+function TournamentMap({ tournaments, selectedId, onSelect }, ref) {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<number, L.Marker>>(new Map());
   const fittedRef = useRef(false);
+  const tournamentsRef = useRef(tournaments);
+  tournamentsRef.current = tournaments;
+
+  useImperativeHandle(ref, () => ({
+    fitAll() {
+      const map = mapRef.current;
+      const ts = tournamentsRef.current;
+      if (!map || ts.length === 0) return;
+      const bounds = L.latLngBounds(ts.map(t => [t.lat, t.lng] as [number, number]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    },
+  }));
 
   // Initialize map
   useEffect(() => {
@@ -137,4 +154,4 @@ export function TournamentMap({ tournaments, selectedId, onSelect }: TournamentM
   }, [selectedId]);
 
   return <div ref={containerRef} className="h-full w-full" />;
-}
+});
