@@ -57,8 +57,9 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
         );
         if (userRes.ok) {
           const userJson = await userRes.json();
-          avatar = userJson?.avatar ?? null;
-          country = userJson?.flag ?? null;
+          // Response shape: { user: {...}, ifpa: {...} }
+          avatar = userJson?.user?.avatar ?? null;
+          country = userJson?.user?.flag || null;
           const ifpa = userJson?.ifpa;
           if (ifpa) {
             worldRank = ifpa.rank ?? null;
