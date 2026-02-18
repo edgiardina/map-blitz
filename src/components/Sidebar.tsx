@@ -1,6 +1,7 @@
 import { TournamentWithCoords } from "@/lib/matchplay";
 import { ActivityFeed } from "./ActivityFeed";
 import { TournamentCard } from "./TournamentCard";
+import { Tv2 } from "lucide-react";
 
 interface SidebarProps {
   tournaments: TournamentWithCoords[];
@@ -8,9 +9,11 @@ interface SidebarProps {
   onSelect: (id: number) => void;
   isLoading: boolean;
   lastUpdated: Date | null;
+  idleMode: boolean;
+  onToggleIdle: () => void;
 }
 
-export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpdated }: SidebarProps) {
+export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpdated, idleMode, onToggleIdle }: SidebarProps) {
   const active = tournaments.filter(t => t.status === "started");
   const other = tournaments.filter(t => t.status !== "started");
 
@@ -24,11 +27,26 @@ export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpda
         <p className="font-display text-[10px] tracking-[0.3em] text-muted-foreground mt-0.5">
           LIVE TOURNAMENT MAP
         </p>
-        <div className="flex items-center gap-2 mt-3">
-          <div className={`w-2 h-2 rounded-full ${isLoading ? "bg-accent animate-pulse-glow" : "bg-neon-green"}`} />
-          <span className="text-[10px] text-muted-foreground font-mono">
-            {isLoading ? "UPDATING..." : lastUpdated ? `LIVE · ${lastUpdated.toLocaleTimeString()}` : "CONNECTING..."}
-          </span>
+        <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isLoading ? "bg-accent animate-pulse-glow" : "bg-neon-green"}`} />
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {isLoading ? "UPDATING..." : lastUpdated ? `LIVE · ${lastUpdated.toLocaleTimeString()}` : "CONNECTING..."}
+            </span>
+          </div>
+          {/* Idle mode toggle */}
+          <button
+            onClick={onToggleIdle}
+            title={idleMode ? "Stop spotlight mode" : "Start spotlight mode"}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-display tracking-widest border transition-all duration-200 ${
+              idleMode
+                ? "border-primary/60 text-primary bg-primary/10 neon-border"
+                : "border-border text-muted-foreground hover:border-primary/30 hover:text-primary"
+            }`}
+          >
+            <Tv2 size={10} className={idleMode ? "animate-pulse" : ""} />
+            {idleMode ? "LIVE" : "IDLE"}
+          </button>
         </div>
       </div>
 

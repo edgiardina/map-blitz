@@ -1,22 +1,41 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { TournamentMap, TournamentMapHandle } from "@/components/TournamentMap";
 import { Sidebar } from "@/components/Sidebar";
+import { SpotlightCard } from "@/components/SpotlightCard";
 import { useTournaments } from "@/hooks/useTournaments";
+import { useIdleSpotlight } from "@/hooks/useIdleSpotlight";
 import { Maximize2 } from "lucide-react";
 
 const Index = () => {
   const { tournaments, isLoading, error, lastUpdated } = useTournaments();
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [idleMode, setIdleMode] = useState(false);
   const mapRef = useRef<TournamentMapHandle>(null);
 
   const handleSelect = (id: number) => {
     setSelectedId(id);
   };
 
-  const handleResetView = () => {
+  const handleResetView = useCallback(() => {
     setSelectedId(null);
     mapRef.current?.fitAll();
+  }, []);
+
+  const handleFocusTournament = useCallback((id: number, lat: number, lng: number) => {
+    setSelectedId(id);
+    mapRef.current?.focusLatLng(lat, lng);
+  }, []);
+
+  const handleToggleIdle = () => {
+    setIdleMode(prev => !prev);
   };
+
+  const { spotlight, progress } = useIdleSpotlight(
+    tournaments,
+    idleMode,
+    handleFocusTournament,
+    handleResetView,
+  );
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
@@ -28,6 +47,8 @@ const Index = () => {
           onSelect={handleSelect}
           isLoading={isLoading}
           lastUpdated={lastUpdated}
+          idleMode={idleMode}
+          onToggleIdle={handleToggleIdle}
         />
       </div>
 
@@ -40,8 +61,8 @@ const Index = () => {
           onSelect={handleSelect}
         />
 
-        {/* Reset view button — only visible when an event is selected */}
-        {selectedId !== null && (
+        {/* Reset view button — only visible when an event is selected and not in idle mode */}
+        {selectedId !== null && !idleMode && (
           <button
             onClick={handleResetView}
             className="absolute top-4 right-4 z-[1000] flex items-center gap-2 px-3 py-2 text-[11px] font-display tracking-widest glass-panel neon-border hover:opacity-80 transition-opacity"
@@ -49,6 +70,15 @@ const Index = () => {
             <Maximize2 size={12} />
             RESET VIEW
           </button>
+        )}
+
+        {/* Spotlight card (idle mode) */}
+        {idleMode && spotlight && (
+          <SpotlightCard
+            player={spotlight}
+            progress={progress}
+            onClose={() => setIdleMode(false)}
+          />
         )}
 
         {/* Error overlay */}
