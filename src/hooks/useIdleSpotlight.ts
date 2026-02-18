@@ -22,7 +22,7 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
   try {
     const res = await fetch(
       `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=tournaments/${tournament.tournamentId}/players&include=user`,
-      { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
+      { method: 'POST', headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
     );
     if (!res.ok) return null;
     const json = await res.json();

@@ -32,12 +32,17 @@ serve(async (req) => {
     const apiUrl = `${MATCHPLAY_BASE}/${endpoint}?${params.toString()}`;
     console.log(`Fetching: ${apiUrl}`);
 
+    const isPost = req.method === 'POST';
+    const body = isPost ? await req.text() : undefined;
+
     const response = await fetch(apiUrl, {
+      method: isPost ? 'POST' : 'GET',
       headers: {
         'Authorization': `Bearer ${MATCHPLAY_API_TOKEN}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+      ...(body ? { body } : {}),
     });
 
     const data = await response.json();
