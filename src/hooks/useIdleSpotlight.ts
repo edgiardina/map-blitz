@@ -135,8 +135,11 @@ export function useIdleSpotlight(
     }, 200);
   }, [onFocusTournament]);
 
+  const wasActiveRef = useRef(false);
+
   useEffect(() => {
     if (!isActive) {
+      wasActiveRef.current = false;
       clearTimers();
       setSpotlight(null);
       setProgress(0);
@@ -147,9 +150,15 @@ export function useIdleSpotlight(
     const validTourns = tournaments.filter(t => t.status === "started");
     if (validTourns.length === 0) return;
 
-    indexRef.current = 0;
-    runCycle(validTourns);
+    // Only reset index when first activating, not on subsequent tournament refreshes
+    if (!wasActiveRef.current) {
+      indexRef.current = 0;
+      wasActiveRef.current = true;
+      runCycle(validTourns);
+    }
 
+    // Always restart the interval so it references the latest tournament list
+    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       runCycle(validTourns);
     }, CYCLE_DURATION_MS);
