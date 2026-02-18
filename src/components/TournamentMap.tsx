@@ -5,6 +5,7 @@ import { TournamentWithCoords } from "@/lib/matchplay";
 
 export interface TournamentMapHandle {
   fitAll: () => void;
+  focusLatLng: (lat: number, lng: number) => void;
 }
 
 interface TournamentMapProps {
@@ -76,6 +77,11 @@ function TournamentMap({ tournaments, selectedId, onSelect }, ref) {
       if (!map || ts.length === 0) return;
       const bounds = L.latLngBounds(ts.map(t => [t.lat, t.lng] as [number, number]));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    },
+    focusLatLng(lat: number, lng: number) {
+      const map = mapRef.current;
+      if (!map) return;
+      map.setView([lat, lng], Math.max(map.getZoom(), 12), { animate: true });
     },
   }));
 
