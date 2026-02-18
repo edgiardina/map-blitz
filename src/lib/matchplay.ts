@@ -20,6 +20,7 @@ export interface Tournament {
     ifpaId: number | null;
     location: string;
     avatar: string | null;
+    flag: string | null;
   };
   location: {
     locationId: number;

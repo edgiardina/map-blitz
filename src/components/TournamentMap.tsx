@@ -107,7 +107,7 @@ function TournamentMap({ tournaments, selectedId, onSelect }, ref) {
     };
   }, []);
 
-  // Update markers
+  // Update markers (only when tournaments list changes, not on selection)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -118,7 +118,7 @@ function TournamentMap({ tournaments, selectedId, onSelect }, ref) {
 
     // Add new markers
     tournaments.forEach((t) => {
-      const icon = createPulsingIcon(t.status, selectedId === t.tournamentId);
+      const icon = createPulsingIcon(t.status, false);
       const marker = L.marker([t.lat, t.lng], { icon }).addTo(map);
 
       marker.bindTooltip(`
@@ -158,17 +158,35 @@ function TournamentMap({ tournaments, selectedId, onSelect }, ref) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
       fittedRef.current = true;
     }
-  }, [tournaments, selectedId, onSelect]);
+  }, [tournaments, onSelect]);
 
-  // Fly to selected
+  // Update selected marker icon without recreating all markers
+  const prevSelectedRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevSelectedRef.current;
+    const next = selectedId;
+
+    if (prev !== null) {
+      const marker = markersRef.current.get(prev);
+      const t = tournaments.find(t => t.tournamentId === prev);
+      if (marker && t) marker.setIcon(createPulsingIcon(t.status, false));
+    }
+    if (next !== null) {
+      const marker = markersRef.current.get(next);
+      const t = tournaments.find(t => t.tournamentId === next);
+      if (marker && t) marker.setIcon(createPulsingIcon(t.status, true));
+    }
+
+    prevSelectedRef.current = next;
+  }, [selectedId, tournaments]);
+
+  // Fly to selected (manual click only, not idle mode which calls focusLatLng directly)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedId) return;
 
     const marker = markersRef.current.get(selectedId);
     if (marker) {
-      const latlng = marker.getLatLng();
-      map.setView(latlng, Math.max(map.getZoom(), 10), { animate: true });
       marker.openPopup();
     }
   }, [selectedId]);
