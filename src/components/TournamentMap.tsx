@@ -115,6 +115,20 @@ function TournamentMap({ tournaments, selectedId, onSelect }, ref) {
       const icon = createPulsingIcon(t.status, selectedId === t.tournamentId);
       const marker = L.marker([t.lat, t.lng], { icon }).addTo(map);
 
+      marker.bindTooltip(`
+        <div style="font-family: 'Space Mono', monospace; min-width: 180px; padding: 2px 0;">
+          <div style="font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700; color: ${getStatusColor(t.status)}; margin-bottom: 4px; line-height: 1.3;">
+            ${t.name}
+          </div>
+          <div style="font-size: 10px; opacity: 0.7; margin-bottom: 2px;">📍 ${t.location?.name || "Unknown"}</div>
+          <div style="font-size: 10px; opacity: 0.7;">🏆 ${formatType(t.type)}</div>
+        </div>
+      `, {
+        className: "dark-tooltip",
+        direction: "top",
+        offset: [0, -8],
+      });
+
       marker.bindPopup(`
         <div style="font-family: 'Space Mono', monospace; color: #b0e0e6; min-width: 200px; padding: 4px;">
           <div style="font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; color: ${getStatusColor(t.status)}; margin-bottom: 6px;">
