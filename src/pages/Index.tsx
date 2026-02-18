@@ -1,11 +1,22 @@
-import { useState } from "react";
-import { TournamentMap } from "@/components/TournamentMap";
+import { useState, useRef } from "react";
+import { TournamentMap, TournamentMapHandle } from "@/components/TournamentMap";
 import { Sidebar } from "@/components/Sidebar";
 import { useTournaments } from "@/hooks/useTournaments";
+import { Maximize2 } from "lucide-react";
 
 const Index = () => {
   const { tournaments, isLoading, error, lastUpdated } = useTournaments();
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const mapRef = useRef<TournamentMapHandle>(null);
+
+  const handleSelect = (id: number) => {
+    setSelectedId(id);
+  };
+
+  const handleResetView = () => {
+    setSelectedId(null);
+    mapRef.current?.fitAll();
+  };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
@@ -14,7 +25,7 @@ const Index = () => {
         <Sidebar
           tournaments={tournaments}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={handleSelect}
           isLoading={isLoading}
           lastUpdated={lastUpdated}
         />
@@ -23,10 +34,22 @@ const Index = () => {
       {/* Map */}
       <div className="flex-1 relative">
         <TournamentMap
+          ref={mapRef}
           tournaments={tournaments}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={handleSelect}
         />
+
+        {/* Reset view button — only visible when an event is selected */}
+        {selectedId !== null && (
+          <button
+            onClick={handleResetView}
+            className="absolute top-4 right-4 z-[1000] flex items-center gap-2 px-3 py-2 text-[11px] font-display tracking-widest glass-panel neon-border hover:opacity-80 transition-opacity"
+          >
+            <Maximize2 size={12} />
+            RESET VIEW
+          </button>
+        )}
 
         {/* Error overlay */}
         {error && (
