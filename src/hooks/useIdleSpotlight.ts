@@ -20,23 +20,38 @@ export interface SpotlightPlayer {
 
 async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promise<SpotlightPlayer | null> {
   try {
-    // Use organizer data which is already available in the tournament object
-    const organizer = tournament.organizer;
-    if (!organizer) return null;
+    // Fetch the tournament with players included
+    const tRes = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=tournaments/${tournament.tournamentId}&includePlayers=1`,
+      { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
+    );
+    if (!tRes.ok) return null;
 
-    const ifpaId: number | null = organizer.ifpaId ?? null;
+    const tJson = await tRes.json();
+    const players: Array<{
+      userId: number;
+      name: string;
+      ifpaId: number | null;
+      avatar: string | null;
+      flag: string | null;
+    }> = tJson?.players ?? [];
+
+    if (players.length === 0) return null;
+
+    // Pick a random player from the list
+    const picked = players[Math.floor(Math.random() * players.length)];
+    const position = players.indexOf(picked) + 1;
+
     let worldRank: number | null = null;
     let countryRank: number | null = null;
     let stateRank: number | null = null;
-    let country: string | null = organizer.flag ?? null;
-    const avatar: string | null = organizer.avatar ?? null;
-    const name: string = organizer.name ?? "Unknown Player";
+    let country: string | null = picked.flag ?? null;
 
-    // Fetch IFPA ranking data if we have an ifpaId
-    if (ifpaId) {
+    // Fetch IFPA ranking data via user endpoint
+    if (picked.userId) {
       try {
         const userRes = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=users/${organizer.userId}&includeIfpa=1`,
+          `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=users/${picked.userId}&includeIfpa=1`,
           { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
         );
         if (userRes.ok) {
@@ -55,15 +70,15 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
     }
 
     return {
-      name,
-      ifpaId,
-      avatar,
+      name: picked.name ?? "Unknown Player",
+      ifpaId: picked.ifpaId ?? null,
+      avatar: picked.avatar ?? null,
       worldRank,
       countryRank,
       stateRank,
       country,
-      profileUrl: ifpaId ? `https://www.ifpapinball.com/player/view/player_id/${ifpaId}` : null,
-      tournamentPosition: 1,
+      profileUrl: picked.ifpaId ? `https://www.ifpapinball.com/player/view/player_id/${picked.ifpaId}` : null,
+      tournamentPosition: position,
       tournament,
     };
   } catch {
