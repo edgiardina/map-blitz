@@ -79,9 +79,14 @@ async function fetchAllPages(): Promise<Tournament[]> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  // Build dateInterval: today at 05:00 UTC to next day at 04:59:59.999 UTC (24-hour window)
+  // Build dateInterval: Matchplay's "today" window is 05:00 UTC → 04:59:59 UTC next day.
+  // If we're between midnight and 05:00 UTC, we're still in the previous day's window.
   const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 5, 0, 0, 0));
+  const anchorDate = new Date(now);
+  if (now.getUTCHours() < 5) {
+    anchorDate.setUTCDate(anchorDate.getUTCDate() - 1);
+  }
+  const start = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), anchorDate.getUTCDate(), 5, 0, 0, 0));
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
   const dateInterval = `${start.toISOString()};${end.toISOString()}`;
 
