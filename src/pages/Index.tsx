@@ -22,7 +22,8 @@ const Index = () => {
   }, []);
 
   const handleFocusTournament = useCallback((id: number, lat: number, lng: number) => {
-    setSelectedId(id);
+    // During idle mode, only move the map — don't update selectedId which causes
+    // cascading marker re-renders and the "spazzing" effect
     mapRef.current?.focusLatLng(lat, lng);
   }, []);
 
