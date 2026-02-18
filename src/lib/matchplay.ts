@@ -100,6 +100,7 @@ async function fetchAllPages(): Promise<Tournament[]> {
       status: 'started',
       dateInterval,
       sortAsc: 'true',
+      perPage: '100',
       page: String(page),
     });
 
