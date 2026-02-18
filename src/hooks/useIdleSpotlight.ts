@@ -80,7 +80,7 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
       countryRank,
       stateRank,
       country,
-      profileUrl: picked.ifpaId ? `https://www.ifpapinball.com/player/view/player_id/${picked.ifpaId}` : null,
+      profileUrl: picked.ifpaId ? `https://www.ifpapinball.com/players/view.php?p=${picked.ifpaId}` : null,
       tournamentPosition: position,
       tournament,
     };
