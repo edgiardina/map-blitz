@@ -12,9 +12,9 @@ const Index = () => {
   const [idleMode, setIdleMode] = useState(false);
   const mapRef = useRef<TournamentMapHandle>(null);
 
-  const handleSelect = (id: number) => {
+  const handleSelect = useCallback((id: number) => {
     setSelectedId(id);
-  };
+  }, []);
 
   const handleResetView = useCallback(() => {
     setSelectedId(null);
