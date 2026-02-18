@@ -41,11 +41,11 @@ export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpda
             className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-display tracking-widest border transition-all duration-200 ${
               idleMode
                 ? "border-primary/60 text-primary bg-primary/10 neon-border"
-                : "border-border text-muted-foreground hover:border-primary/30 hover:text-primary"
+                : "border-border/40 text-muted-foreground/40 hover:border-border hover:text-muted-foreground"
             }`}
           >
             <Tv2 size={10} className={idleMode ? "animate-pulse" : ""} />
-            {idleMode ? "LIVE" : "IDLE"}
+            SPOTLIGHT
           </button>
         </div>
       </div>
