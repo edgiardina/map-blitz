@@ -39,7 +39,7 @@ export function SpotlightCard({ player, progress, onClose }: SpotlightCardProps)
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-[9px] font-display tracking-[0.25em] text-primary mb-1">
-                ◆ ORGANIZER SPOTLIGHT
+                ◆ PLAYER SPOTLIGHT
               </div>
               <div className="text-[10px] text-muted-foreground truncate max-w-[220px]">
                 {player.tournament.name}
