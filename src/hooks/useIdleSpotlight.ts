@@ -28,13 +28,13 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
     if (!tRes.ok) return null;
 
     const tJson = await tRes.json();
+    // API returns { data: { ..., players: [...] } }
     const players: Array<{
-      userId: number;
+      playerId: number;
       name: string;
       ifpaId: number | null;
-      avatar: string | null;
-      flag: string | null;
-    }> = tJson?.players ?? [];
+      claimedBy: number | null; // matchplay userId
+    }> = tJson?.data?.players ?? [];
 
     if (players.length === 0) return null;
 
@@ -45,17 +45,20 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
     let worldRank: number | null = null;
     let countryRank: number | null = null;
     let stateRank: number | null = null;
-    let country: string | null = picked.flag ?? null;
+    let country: string | null = null;
+    let avatar: string | null = null;
 
-    // Fetch IFPA ranking data via user endpoint
-    if (picked.userId) {
+    // Fetch user profile + IFPA data via claimedBy (matchplay userId)
+    if (picked.claimedBy) {
       try {
         const userRes = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=users/${picked.userId}&includeIfpa=1`,
+          `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=users/${picked.claimedBy}&includeIfpa=1`,
           { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
         );
         if (userRes.ok) {
           const userJson = await userRes.json();
+          avatar = userJson?.avatar ?? null;
+          country = userJson?.flag ?? null;
           const ifpa = userJson?.ifpa;
           if (ifpa) {
             worldRank = ifpa.rank ?? null;
@@ -65,14 +68,14 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
           }
         }
       } catch {
-        // IFPA fetch failed — use Matchplay data only
+        // User fetch failed — continue without profile data
       }
     }
 
     return {
       name: picked.name ?? "Unknown Player",
       ifpaId: picked.ifpaId ?? null,
-      avatar: picked.avatar ?? null,
+      avatar,
       worldRank,
       countryRank,
       stateRank,
