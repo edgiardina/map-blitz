@@ -40,23 +40,21 @@ export function TournamentCard({ tournament, isSelected, onClick }: TournamentCa
         <span className="text-[9px] font-mono text-muted-foreground">
           {formatType(tournament.type)}
         </span>
-        <div className="flex items-center gap-2">
-          <a
-            href={`https://app.matchplay.events/tournaments/${tournament.tournamentId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-0.5 text-[9px] font-display tracking-wider text-muted-foreground hover:text-primary transition-colors"
-          >
-            VIEW <ExternalLink size={8} />
-          </a>
-          <span className={`text-[9px] font-display font-bold tracking-wider ${
-            tournament.status === "started" ? "neon-text-cyan" : "text-secondary"
-          }`}>
-            {tournament.status.toUpperCase()}
-          </span>
-        </div>
+        <span className={`text-[9px] font-display font-bold tracking-wider ${
+          tournament.status === "started" ? "neon-text-cyan" : "text-secondary"
+        }`}>
+          {tournament.status.toUpperCase()}
+        </span>
       </div>
+      <a
+        href={`https://app.matchplay.events/tournaments/${tournament.tournamentId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="mt-2 w-full inline-flex items-center justify-center gap-1 text-[9px] font-display tracking-widest text-muted-foreground hover:text-primary border border-border hover:border-primary/40 rounded py-1 transition-colors"
+      >
+        VIEW ON MATCHPLAY <ExternalLink size={8} />
+      </a>
     </button>
   );
 }
