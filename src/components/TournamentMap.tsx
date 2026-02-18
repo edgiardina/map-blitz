@@ -6,6 +6,7 @@ import { TournamentWithCoords } from "@/lib/matchplay";
 export interface TournamentMapHandle {
   fitAll: () => void;
   focusLatLng: (lat: number, lng: number) => void;
+  openTournamentPopup: (id: number) => void;
 }
 
 interface TournamentMapProps {
@@ -82,6 +83,10 @@ function TournamentMap({ tournaments, selectedId, onSelect }, ref) {
       const map = mapRef.current;
       if (!map) return;
       map.setView([lat, lng], Math.max(map.getZoom(), 12), { animate: true });
+    },
+    openTournamentPopup(id: number) {
+      const marker = markersRef.current.get(id);
+      if (marker) marker.openPopup();
     },
   }));
 

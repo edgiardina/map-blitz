@@ -25,6 +25,8 @@ const Index = () => {
     // During idle mode, only move the map — don't update selectedId which causes
     // cascading marker re-renders and the "spazzing" effect
     mapRef.current?.focusLatLng(lat, lng);
+    // Open the popup a beat after the pan animation starts
+    setTimeout(() => mapRef.current?.openTournamentPopup(id), 600);
   }, []);
 
   const handleToggleIdle = () => {
