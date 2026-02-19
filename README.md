@@ -60,6 +60,18 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `VITE_API_BASE_URL` | Base URL for the backend API proxy. Set this to point to your self-hosted server (e.g. `http://localhost:5000`). | Lovable Cloud functions URL |
+
+To self-host the backend, add this to your `.env`:
+
+```
+VITE_API_BASE_URL=http://localhost:5000
+```
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
