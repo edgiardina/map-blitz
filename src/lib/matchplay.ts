@@ -76,8 +76,12 @@ function isLikelyLeague(t: Tournament): boolean {
   return false;
 }
 
+// Default API base URL points to Lovable Cloud; change this one line to self-host:
+// VITE_API_BASE_URL=http://localhost:5000
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
+
 async function fetchAllPages(): Promise<Tournament[]> {
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
   // Build dateInterval: Matchplay's "today" window is 05:00 UTC → 04:59:59 UTC next day.
@@ -106,7 +110,7 @@ async function fetchAllPages(): Promise<Tournament[]> {
     });
 
     const response = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?${params.toString()}`,
+      `${API_BASE_URL}/matchplay-proxy?${params.toString()}`,
       {
         headers: {
           'apikey': apiKey,

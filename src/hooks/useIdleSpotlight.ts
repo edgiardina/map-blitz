@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { TournamentWithCoords } from "@/lib/matchplay";
 
 const CYCLE_DURATION_MS = 30_000;
-const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
 const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export interface SpotlightPlayer {
@@ -20,7 +21,7 @@ export interface SpotlightPlayer {
 
 async function fetchUserProfile(userId: number) {
   const userRes = await fetch(
-    `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=users/${userId}&includeIfpa=1`,
+    `${API_BASE_URL}/matchplay-proxy?endpoint=users/${userId}&includeIfpa=1`,
     { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
   );
   if (!userRes.ok) return null;
@@ -37,7 +38,7 @@ function scorePlayer(avatar: string | null, worldRank: number | null): number {
 async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promise<SpotlightPlayer | null> {
   try {
     const tRes = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=tournaments/${tournament.tournamentId}&includePlayers=1`,
+      `${API_BASE_URL}/matchplay-proxy?endpoint=tournaments/${tournament.tournamentId}&includePlayers=1`,
       { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
     );
     if (!tRes.ok) return null;
