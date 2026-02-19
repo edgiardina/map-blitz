@@ -1,6 +1,6 @@
 # Welcome to your Lovable project
 
-[![CI](https://img.shields.io/github/actions/workflow/status/edgiardina/map-blitz/ci.yml?branch=main&label=build)](https://github.com/edgiardina/map-blitz/actions/workflows/ci.yml)
+[![CI](https://github.com/edgiardina/map-blitz/actions/workflows/ci.yml/badge.svg)](https://github.com/edgiardina/map-blitz/actions/workflows/ci.yml)
 
 ## Project info
 
