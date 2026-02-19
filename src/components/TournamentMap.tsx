@@ -6,6 +6,7 @@ import { TournamentWithCoords } from "@/lib/matchplay";
 export interface TournamentMapHandle {
   fitAll: () => void;
   focusLatLng: (lat: number, lng: number) => void;
+  flyToLocation: (lat: number, lng: number) => void;
   openTournamentPopup: (id: number) => void;
 }
 
@@ -83,6 +84,22 @@ function TournamentMap({ tournaments, selectedId, onSelect }, ref) {
       const map = mapRef.current;
       if (!map) return;
       map.setView([lat, lng], Math.max(map.getZoom(), 12), { animate: true });
+    },
+    flyToLocation(lat: number, lng: number) {
+      const map = mapRef.current;
+      if (!map) return;
+      const ZOOM_OUT = 4;
+      const ZOOM_IN = 11;
+      // Step 1: zoom out to overview
+      map.flyTo(map.getCenter(), ZOOM_OUT, { animate: true, duration: 1.0 });
+      // Step 2: after zoom-out settles, pan to destination
+      setTimeout(() => {
+        map.flyTo([lat, lng], ZOOM_OUT, { animate: true, duration: 1.4 });
+        // Step 3: after pan, zoom into destination
+        setTimeout(() => {
+          map.flyTo([lat, lng], ZOOM_IN, { animate: true, duration: 1.0 });
+        }, 1600);
+      }, 1100);
     },
     openTournamentPopup(id: number) {
       const marker = markersRef.current.get(id);
