@@ -18,9 +18,24 @@ export interface SpotlightPlayer {
   tournament: TournamentWithCoords;
 }
 
+async function fetchUserProfile(userId: number) {
+  const userRes = await fetch(
+    `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=users/${userId}&includeIfpa=1`,
+    { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
+  );
+  if (!userRes.ok) return null;
+  return userRes.json();
+}
+
+function scorePlayer(avatar: string | null, worldRank: number | null): number {
+  let score = 0;
+  if (avatar) score += 100;                          // strong bonus for having a picture
+  if (worldRank && worldRank > 0) score += Math.max(0, 500 - worldRank); // higher rank = better score
+  return score;
+}
+
 async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promise<SpotlightPlayer | null> {
   try {
-    // Fetch the tournament with players included
     const tRes = await fetch(
       `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=tournaments/${tournament.tournamentId}&includePlayers=1`,
       { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
@@ -28,60 +43,67 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
     if (!tRes.ok) return null;
 
     const tJson = await tRes.json();
-    // API returns { data: { ..., players: [...] } }
-    const players: Array<{
+    const allPlayers: Array<{
       playerId: number;
       name: string;
       ifpaId: number | null;
-      claimedBy: number | null; // matchplay userId
+      claimedBy: number | null;
     }> = tJson?.data?.players ?? [];
 
-    if (players.length === 0) return null;
+    if (allPlayers.length === 0) return null;
 
-    // Pick a random player from the list
-    const picked = players[Math.floor(Math.random() * players.length)];
-    const position = players.indexOf(picked) + 1;
+    // Prefer players with claimed accounts (have profiles/avatars), shuffle for variety
+    const claimed = allPlayers.filter(p => p.claimedBy != null);
+    const candidates = claimed.length > 0 ? claimed : allPlayers;
+    const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+    const batch = shuffled.slice(0, 6); // fetch up to 6 profiles in parallel
 
-    let worldRank: number | null = null;
-    let countryRank: number | null = null;
-    let stateRank: number | null = null;
-    let country: string | null = null;
-    let avatar: string | null = null;
-
-    // Fetch user profile + IFPA data via claimedBy (matchplay userId)
-    if (picked.claimedBy) {
-      try {
-        const userRes = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/matchplay-proxy?endpoint=users/${picked.claimedBy}&includeIfpa=1`,
-          { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
-        );
-        if (userRes.ok) {
-          const userJson = await userRes.json();
-          // Response shape: { user: {...}, ifpa: {...} }
-          avatar = userJson?.user?.avatar ?? null;
-          country = userJson?.user?.flag || null;
-          const ifpa = userJson?.ifpa;
-          if (ifpa) {
-            worldRank = ifpa.rank ?? null;
-            countryRank = ifpa.countryRank ?? null;
-            stateRank = ifpa.stateRank ?? null;
-            country = ifpa.countryCode ?? country;
-          }
+    // Fetch profiles in parallel
+    const profiles = await Promise.all(
+      batch.map(async (p) => {
+        if (!p.claimedBy) return { player: p, userJson: null };
+        try {
+          const userJson = await fetchUserProfile(p.claimedBy);
+          return { player: p, userJson };
+        } catch {
+          return { player: p, userJson: null };
         }
-      } catch {
-        // User fetch failed — continue without profile data
-      }
-    }
+      })
+    );
+
+    // Score each candidate and pick the best
+    const scored = profiles.map(({ player, userJson }) => {
+      const avatar = userJson?.user?.avatar ?? null;
+      const ifpa = userJson?.ifpa;
+      const worldRank: number | null = ifpa?.rank ?? null;
+      const countryRank: number | null = ifpa?.countryRank ?? null;
+      const stateRank: number | null = ifpa?.stateRank ?? null;
+      const country: string | null = ifpa?.countryCode ?? userJson?.user?.flag ?? null;
+      return {
+        player,
+        avatar,
+        worldRank,
+        countryRank,
+        stateRank,
+        country,
+        score: scorePlayer(avatar, worldRank),
+      };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    const best = scored[0];
+
+    const position = allPlayers.findIndex(p => p.playerId === best.player.playerId) + 1;
 
     return {
-      name: picked.name ?? "Unknown Player",
-      ifpaId: picked.ifpaId ?? null,
-      avatar,
-      worldRank,
-      countryRank,
-      stateRank,
-      country,
-      profileUrl: picked.ifpaId ? `https://www.ifpapinball.com/players/view.php?p=${picked.ifpaId}` : null,
+      name: best.player.name ?? "Unknown Player",
+      ifpaId: best.player.ifpaId ?? null,
+      avatar: best.avatar,
+      worldRank: best.worldRank,
+      countryRank: best.countryRank,
+      stateRank: best.stateRank,
+      country: best.country,
+      profileUrl: best.player.ifpaId ? `https://www.ifpapinball.com/players/view.php?p=${best.player.ifpaId}` : null,
       tournamentPosition: position,
       tournament,
     };
