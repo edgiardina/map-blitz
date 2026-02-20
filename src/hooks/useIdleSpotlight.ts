@@ -37,11 +37,27 @@ function scorePlayer(avatar: string | null, worldRank: number | null): number {
 
 async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promise<SpotlightPlayer | null> {
   try {
+    // Fetch tournament details with players via the proxy
     const tRes = await fetch(
       `${API_BASE_URL}/matchplay-proxy?endpoint=tournaments/${tournament.tournamentId}&includePlayers=1`,
       { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
     );
-    if (!tRes.ok) return null;
+    if (!tRes.ok) {
+      console.warn(`Spotlight: failed to fetch tournament ${tournament.tournamentId} (${tRes.status}), skipping player details`);
+      // Return a basic spotlight without player details
+      return {
+        name: "Tournament Player",
+        ifpaId: null,
+        avatar: null,
+        worldRank: null,
+        countryRank: null,
+        stateRank: null,
+        country: null,
+        profileUrl: null,
+        tournamentPosition: 1,
+        tournament,
+      };
+    }
 
     const tJson = await tRes.json();
     const allPlayers: Array<{
@@ -51,13 +67,26 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
       claimedBy: number | null;
     }> = tJson?.data?.players ?? [];
 
-    if (allPlayers.length === 0) return null;
+    if (allPlayers.length === 0) {
+      return {
+        name: "Tournament Player",
+        ifpaId: null,
+        avatar: null,
+        worldRank: null,
+        countryRank: null,
+        stateRank: null,
+        country: null,
+        profileUrl: null,
+        tournamentPosition: 1,
+        tournament,
+      };
+    }
 
     // Prefer players with claimed accounts (have profiles/avatars), shuffle for variety
     const claimed = allPlayers.filter(p => p.claimedBy != null);
     const candidates = claimed.length > 0 ? claimed : allPlayers;
     const shuffled = [...candidates].sort(() => Math.random() - 0.5);
-    const batch = shuffled.slice(0, 6); // fetch up to 6 profiles in parallel
+    const batch = shuffled.slice(0, 6);
 
     // Fetch profiles in parallel
     const profiles = await Promise.all(
