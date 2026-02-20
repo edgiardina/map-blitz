@@ -6,6 +6,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
 const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+export interface SpotlightMatch {
+  playerNames: string[];
+  roundName: string;
+  isActive: boolean;
+}
+
 export interface SpotlightPlayer {
   name: string;
   ifpaId: number | null;
@@ -17,6 +23,8 @@ export interface SpotlightPlayer {
   profileUrl: string | null;
   tournamentPosition: number;
   tournament: TournamentWithCoords;
+  activeMatches: SpotlightMatch[];
+  activeRoundName: string | null;
 }
 
 async function fetchUserProfile(userId: number) {
@@ -53,29 +61,67 @@ function scorePlayer(avatar: string | null, worldRank: number | null): number {
   return score;
 }
 
-async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promise<SpotlightPlayer | null> {
+async function fetchActiveMatches(tournamentId: number, allPlayers: Array<{ playerId: number; name: string }>): Promise<{ matches: SpotlightMatch[]; roundName: string | null }> {
   try {
-    // Fetch tournament details with players via the proxy
+    const [roundsRes, gamesRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/matchplay-proxy?endpoint=tournaments/${tournamentId}/rounds`, {
+        headers: { apikey: apiKey, 'Content-Type': 'application/json' },
+      }),
+      fetch(`${API_BASE_URL}/matchplay-proxy?endpoint=tournaments/${tournamentId}/games&per_page=50`, {
+        headers: { apikey: apiKey, 'Content-Type': 'application/json' },
+      }),
+    ]);
+
+    if (!roundsRes.ok || !gamesRes.ok) return { matches: [], roundName: null };
+
+    const roundsJson = await roundsRes.json();
+    const gamesJson = await gamesRes.json();
+
+    const rounds = roundsJson?.data ?? [];
+    const activeRound = rounds.find((r: { status: string }) => r.status === "started");
+    if (!activeRound) return { matches: [], roundName: null };
+
+    const games = (gamesJson?.data ?? []).filter(
+      (g: { roundId: number; status: string }) => g.roundId === activeRound.roundId
+    );
+
+    const playerMap = new Map(allPlayers.map(p => [p.playerId, p.name]));
+
+    const matches: SpotlightMatch[] = games.slice(0, 3).map((g: { playerIds: number[]; status: string }) => ({
+      playerNames: g.playerIds.map(id => playerMap.get(id) ?? `Player ${id}`),
+      roundName: activeRound.name,
+      isActive: g.status !== "completed",
+    }));
+
+    return { matches, roundName: activeRound.name };
+  } catch {
+    return { matches: [], roundName: null };
+  }
+}
+
+async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promise<SpotlightPlayer | null> {
+  const emptyResult = (extra?: Partial<SpotlightPlayer>): SpotlightPlayer => ({
+    name: "Tournament Player",
+    ifpaId: null,
+    avatar: null,
+    worldRank: null,
+    countryRank: null,
+    stateRank: null,
+    country: null,
+    profileUrl: null,
+    tournamentPosition: 1,
+    tournament,
+    activeMatches: [],
+    activeRoundName: null,
+    ...extra,
+  });
+
+  try {
     const tRes = await fetch(
       `${API_BASE_URL}/matchplay-proxy?endpoint=tournaments/${tournament.tournamentId}&includePlayers=1`,
       { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
     );
-    if (!tRes.ok) {
-      console.warn(`Spotlight: failed to fetch tournament ${tournament.tournamentId} (${tRes.status}), skipping player details`);
-      // Return a basic spotlight without player details
-      return {
-        name: "Tournament Player",
-        ifpaId: null,
-        avatar: null,
-        worldRank: null,
-        countryRank: null,
-        stateRank: null,
-        country: null,
-        profileUrl: null,
-        tournamentPosition: 1,
-        tournament,
-      };
-    }
+    if (!tRes.ok) return emptyResult();
 
     const tJson = await tRes.json();
     const allPlayers: Array<{
@@ -85,41 +131,32 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
       claimedBy: number | null;
     }> = tJson?.data?.players ?? [];
 
-    if (allPlayers.length === 0) {
-      return {
-        name: "Tournament Player",
-        ifpaId: null,
-        avatar: null,
-        worldRank: null,
-        countryRank: null,
-        stateRank: null,
-        country: null,
-        profileUrl: null,
-        tournamentPosition: 1,
-        tournament,
-      };
-    }
+    if (allPlayers.length === 0) return emptyResult();
 
-    // Prefer players with claimed accounts (have profiles/avatars), shuffle for variety
+    // Fetch active matches in parallel with player profiles
+    const matchPromise = fetchActiveMatches(tournament.tournamentId, allPlayers);
+
+    // Prefer players with claimed accounts
     const claimed = allPlayers.filter(p => p.claimedBy != null);
     const candidates = claimed.length > 0 ? claimed : allPlayers;
     const shuffled = [...candidates].sort(() => Math.random() - 0.5);
     const batch = shuffled.slice(0, 6);
 
-    // Fetch profiles in parallel
-    const profiles = await Promise.all(
-      batch.map(async (p) => {
-        if (!p.claimedBy) return { player: p, userJson: null };
-        try {
-          const userJson = await fetchUserProfile(p.claimedBy);
-          return { player: p, userJson };
-        } catch {
-          return { player: p, userJson: null };
-        }
-      })
-    );
+    const [profiles, matchData] = await Promise.all([
+      Promise.all(
+        batch.map(async (p) => {
+          if (!p.claimedBy) return { player: p, userJson: null };
+          try {
+            const userJson = await fetchUserProfile(p.claimedBy);
+            return { player: p, userJson };
+          } catch {
+            return { player: p, userJson: null };
+          }
+        })
+      ),
+      matchPromise,
+    ]);
 
-    // Score each candidate, fetching IFPA avatar as fallback
     const scored = await Promise.all(
       profiles.map(async ({ player, userJson }) => {
         let avatar: string | null = userJson?.user?.avatar ?? null;
@@ -129,7 +166,6 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
         const stateRank: number | null = ifpa?.stateRank ?? null;
         const country: string | null = ifpa?.countryCode ?? userJson?.user?.flag ?? null;
 
-        // Fallback: fetch IFPA profile photo if no Matchplay avatar
         if (!avatar && (player.ifpaId || ifpa?.ifpaId)) {
           const id = player.ifpaId || ifpa?.ifpaId;
           avatar = await fetchIfpaAvatar(id);
@@ -149,7 +185,6 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
 
     scored.sort((a, b) => b.score - a.score);
     const best = scored[0];
-
     const position = allPlayers.findIndex(p => p.playerId === best.player.playerId) + 1;
 
     return {
@@ -163,6 +198,8 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
       profileUrl: best.player.ifpaId ? `https://www.ifpapinball.com/players/view.php?p=${best.player.ifpaId}` : null,
       tournamentPosition: position,
       tournament,
+      activeMatches: matchData.matches,
+      activeRoundName: matchData.roundName,
     };
   } catch {
     return null;
