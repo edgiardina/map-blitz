@@ -9,19 +9,7 @@ const corsHeaders = {
 const MATCHPLAY_BASE = 'https://app.matchplay.events/api';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-function buildDateInterval(): string {
-  const now = new Date();
-  const anchorDate = new Date(now);
-  if (now.getUTCHours() < 5) {
-    anchorDate.setUTCDate(anchorDate.getUTCDate() - 1);
-  }
-  const start = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), anchorDate.getUTCDate(), 5, 0, 0, 0));
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
-  return `${start.toISOString()};${end.toISOString()}`;
-}
-
 async function fetchAllPagesFromMatchplay(apiToken: string): Promise<unknown[]> {
-  const dateInterval = buildDateInterval();
   let allTournaments: unknown[] = [];
   let page = 1;
   let lastPage = 1;
@@ -29,13 +17,13 @@ async function fetchAllPagesFromMatchplay(apiToken: string): Promise<unknown[]> 
   do {
     const params = new URLSearchParams({
       status: 'started',
-      dateInterval,
-      sortAsc: 'true',
-      perPage: '100',
+      per_page: '100',
       page: String(page),
     });
 
-    const response = await fetch(`${MATCHPLAY_BASE}/tournaments?${params.toString()}`, {
+    const url = `${MATCHPLAY_BASE}/tournaments?${params.toString()}`;
+
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
@@ -44,7 +32,9 @@ async function fetchAllPagesFromMatchplay(apiToken: string): Promise<unknown[]> 
     });
 
     if (!response.ok) {
-      throw new Error(`Matchplay API error: ${response.status}`);
+      const body = await response.text();
+      console.error(`Matchplay API error ${response.status}: ${body}`);
+      throw new Error(`Matchplay API error: ${response.status} - ${body}`);
     }
 
     const json = await response.json();
@@ -91,14 +81,26 @@ serve(async (req) => {
       });
     }
 
-    // Cache is stale — refresh from Matchplay
+    // Cache is stale — try to refresh from Matchplay
     console.log(`Cache miss (age: ${Math.round(age / 1000)}s), refreshing...`);
     const apiToken = Deno.env.get('MATCHPLAY_API_TOKEN');
     if (!apiToken) {
-      throw new Error('MATCHPLAY_API_TOKEN is not configured');
+      // No token — return stale cache
+      console.warn('MATCHPLAY_API_TOKEN not configured, returning stale cache');
+      return new Response(JSON.stringify({ data: cache.data, cached_at: cache.updated_at, stale: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const tournaments = await fetchAllPagesFromMatchplay(apiToken);
+    let tournaments: unknown[];
+    try {
+      tournaments = await fetchAllPagesFromMatchplay(apiToken);
+    } catch (fetchErr) {
+      console.error('Matchplay fetch failed, returning stale cache:', fetchErr);
+      return new Response(JSON.stringify({ data: cache.data, cached_at: cache.updated_at, stale: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Update cache
     const now = new Date().toISOString();
@@ -109,7 +111,6 @@ serve(async (req) => {
 
     if (writeError) {
       console.error('Cache write error:', writeError.message);
-      // Still return the fresh data even if cache write fails
     }
 
     console.log(`Refreshed cache with ${tournaments.length} tournaments`);
