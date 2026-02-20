@@ -1,9 +1,9 @@
-import { ExternalLink, Trophy, Globe, MapPin, X } from "lucide-react";
+import { ExternalLink, Trophy, Globe, MapPin, X, Zap, Users } from "lucide-react";
 import { SpotlightPlayer } from "@/hooks/useIdleSpotlight";
 
 interface SpotlightCardProps {
   player: SpotlightPlayer;
-  progress: number; // 0–100
+  progress: number;
   onClose: () => void;
 }
 
@@ -19,9 +19,10 @@ function RankBadge({ label, value }: { label: string; value: number | null }) {
 
 export function SpotlightCard({ player, progress, onClose }: SpotlightCardProps) {
   const hasRanks = player.worldRank || player.countryRank || player.stateRank;
+  const hasMatches = player.activeMatches.length > 0;
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[340px] animate-fade-in pointer-events-auto">
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[380px] animate-fade-in pointer-events-auto">
       {/* Glow backdrop */}
       <div className="absolute inset-0 rounded-xl blur-xl bg-primary/10 pointer-events-none" />
 
@@ -41,10 +42,10 @@ export function SpotlightCard({ player, progress, onClose }: SpotlightCardProps)
               <div className="text-[9px] font-display tracking-[0.25em] text-primary mb-1">
                 ◆ PLAYER SPOTLIGHT
               </div>
-              <div className="text-[10px] text-muted-foreground truncate max-w-[220px]">
+              <div className="text-[10px] text-muted-foreground truncate max-w-[260px]">
                 {player.tournament.name}
               </div>
-              <div className="text-[9px] text-muted-foreground/60 truncate max-w-[220px]">
+              <div className="text-[9px] text-muted-foreground/60 truncate max-w-[260px]">
                 📍 {player.tournament.location?.name}
               </div>
             </div>
@@ -118,6 +119,40 @@ export function SpotlightCard({ player, progress, onClose }: SpotlightCardProps)
               <RankBadge label="WORLD" value={player.worldRank} />
               <RankBadge label="COUNTRY" value={player.countryRank} />
               <RankBadge label="STATE" value={player.stateRank} />
+            </div>
+          )}
+
+          {/* Active Matches */}
+          {hasMatches && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Zap size={10} className="text-neon-green" />
+                <span className="text-[9px] font-display tracking-widest text-muted-foreground">
+                  {player.activeRoundName?.toUpperCase() ?? "ACTIVE MATCHES"}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {player.activeMatches.map((match, i) => (
+                  <div key={i} className="glass-panel px-2.5 py-1.5 rounded">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Users size={9} className="text-muted-foreground flex-shrink-0" />
+                      {match.playerNames.map((name, j) => (
+                        <span key={j} className="text-[10px] text-foreground/80">
+                          {name}{j < match.playerNames.length - 1 && (
+                            <span className="text-muted-foreground/40 mx-0.5">·</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                    {match.isActive && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <div className="w-1 h-1 rounded-full bg-neon-green animate-pulse" />
+                        <span className="text-[7px] font-display tracking-widest text-neon-green">LIVE</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

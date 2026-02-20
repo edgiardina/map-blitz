@@ -1,9 +1,11 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { TournamentMap, TournamentMapHandle } from "@/components/TournamentMap";
 import { Sidebar } from "@/components/Sidebar";
 import { SpotlightCard } from "@/components/SpotlightCard";
+import { TournamentDetailPanel } from "@/components/TournamentDetailPanel";
 import { useTournaments } from "@/hooks/useTournaments";
 import { useIdleSpotlight } from "@/hooks/useIdleSpotlight";
+import { useTournamentDetails } from "@/hooks/useTournamentDetails";
 import { Maximize2 } from "lucide-react";
 
 const Index = () => {
@@ -11,6 +13,15 @@ const Index = () => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [idleMode, setIdleMode] = useState(false);
   const mapRef = useRef<TournamentMapHandle>(null);
+
+  const selectedTournament = useMemo(
+    () => tournaments.find(t => t.tournamentId === selectedId) ?? null,
+    [tournaments, selectedId]
+  );
+
+  const { details, isLoading: detailsLoading } = useTournamentDetails(
+    idleMode ? null : selectedId
+  );
 
   const handleSelect = useCallback((id: number) => {
     setSelectedId(id);
@@ -22,9 +33,7 @@ const Index = () => {
   }, []);
 
   const handleFocusTournament = useCallback((id: number, lat: number, lng: number) => {
-    // Use staged zoom-out → pan → zoom-in animation for spotlight transitions
     mapRef.current?.flyToLocation(lat, lng);
-    // Open popup after the full animation sequence completes (~3.7s)
     setTimeout(() => mapRef.current?.openTournamentPopup(id), 3800);
   }, []);
 
@@ -63,15 +72,25 @@ const Index = () => {
           onSelect={handleSelect}
         />
 
-        {/* Reset view button — only visible when an event is selected and not in idle mode */}
+        {/* Reset view button */}
         {selectedId !== null && !idleMode && (
           <button
             onClick={handleResetView}
-            className="absolute top-4 right-4 z-[1000] flex items-center gap-2 px-3 py-2 text-[11px] font-display tracking-widest glass-panel neon-border hover:opacity-80 transition-opacity"
+            className="absolute top-4 left-4 z-[1000] flex items-center gap-2 px-3 py-2 text-[11px] font-display tracking-widest glass-panel neon-border hover:opacity-80 transition-opacity"
           >
             <Maximize2 size={12} />
             RESET VIEW
           </button>
+        )}
+
+        {/* Tournament detail panel */}
+        {selectedId !== null && !idleMode && selectedTournament && details && (
+          <TournamentDetailPanel
+            tournament={selectedTournament}
+            details={details}
+            isLoading={detailsLoading}
+            onClose={handleResetView}
+          />
         )}
 
         {/* Spotlight card (idle mode) */}
