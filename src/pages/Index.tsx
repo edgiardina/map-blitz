@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { TournamentMap, TournamentMapHandle } from "@/components/TournamentMap";
 import { Sidebar } from "@/components/Sidebar";
 import { SpotlightCard } from "@/components/SpotlightCard";
@@ -8,20 +9,49 @@ import { useIdleSpotlight } from "@/hooks/useIdleSpotlight";
 import { useTournamentDetails } from "@/hooks/useTournamentDetails";
 import { Maximize2 } from "lucide-react";
 
+const IDLE_TIMEOUT_MS = 60_000; // 1 minute of inactivity
+
 const Index = () => {
+  const [searchParams] = useSearchParams();
   const { tournaments, isLoading, error, lastUpdated } = useTournaments();
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [idleMode, setIdleMode] = useState(false);
+  const [idleMode, setIdleMode] = useState(() => searchParams.get("spotlight") === "1");
   const mapRef = useRef<TournamentMapHandle>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset idle timer on any user interaction
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      setIdleMode(true);
+    }, IDLE_TIMEOUT_MS);
+  }, []);
+
+  useEffect(() => {
+    const events = ["pointerdown", "pointermove", "keydown", "scroll", "touchstart"];
+    const handler = () => {
+      // If user interacts while idle, don't reset timer here —
+      // handleSelect / handleToggleIdle handle exiting idle mode
+      if (!idleMode) resetIdleTimer();
+    };
+    events.forEach(e => window.addEventListener(e, handler, { passive: true }));
+    // Start the timer initially (unless already in spotlight via URL param)
+    if (!idleMode) resetIdleTimer();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, handler));
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [idleMode, resetIdleTimer]);
 
   const handleSelect = useCallback((id: number) => {
     setSelectedId(id);
     if (idleMode) setIdleMode(false);
+    resetIdleTimer();
     const t = tournaments.find(t => t.tournamentId === id);
     if (t) {
       mapRef.current?.focusLatLng(t.lat, t.lng);
     }
-  }, [tournaments, idleMode]);
+  }, [tournaments, idleMode, resetIdleTimer]);
 
   const handleResetView = useCallback(() => {
     setSelectedId(null);
