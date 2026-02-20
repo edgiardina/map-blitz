@@ -19,14 +19,42 @@ export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpda
   const other = tournaments.filter(t => t.status !== "started");
   const countryCount = useMemo(() => {
     const countries = new Set<string>();
+    // Known 2-letter country codes and full names we might encounter
+    const COUNTRY_CODES = new Set([
+      "US", "USA", "CA", "GB", "UK", "DE", "FR", "ES", "IT", "NL", "BE", "AT",
+      "CH", "SE", "NO", "DK", "FI", "PL", "CZ", "PT", "IE", "AU", "NZ", "JP",
+      "KR", "BR", "MX", "AR", "CL", "CO", "ZA", "IN", "SG", "HK", "TW", "IL",
+      "TR", "RU", "HU", "RO", "BG", "HR", "SK", "SI", "LT", "LV", "EE", "IS",
+      "LU", "MT", "CY", "GR",
+    ]);
+    const COUNTRY_NAMES: Record<string, string> = {
+      "UNITED STATES": "US", "CANADA": "CA", "NORWAY": "NO", "GERMANY": "DE",
+      "FRANCE": "FR", "SPAIN": "ES", "ITALY": "IT", "AUSTRALIA": "AU",
+      "UNITED KINGDOM": "GB", "NETHERLANDS": "NL", "SWEDEN": "SE",
+      "DENMARK": "DK", "FINLAND": "FI", "POLAND": "PL", "BRAZIL": "BR",
+      "MEXICO": "MX", "JAPAN": "JP", "NEW ZEALAND": "NZ", "IRELAND": "IE",
+    };
+
     for (const t of tournaments) {
+      let found = false;
       if (t.location?.address) {
-        // Extract country code from the end of the address (e.g. ", US")
+        // Try the last comma-separated segment
         const parts = t.location.address.split(',');
-        const last = parts[parts.length - 1]?.trim();
-        if (last) countries.add(last);
-      } else if (t.organizer?.flag) {
-        countries.add(t.organizer.flag);
+        const last = parts[parts.length - 1]?.trim().toUpperCase();
+        if (last) {
+          // Check if it's a known country code (possibly with zip, e.g. "US" from "73127, US")
+          const tokens = last.split(/\s+/);
+          for (const tok of tokens) {
+            if (COUNTRY_CODES.has(tok)) { countries.add(tok === "USA" ? "US" : tok === "UK" ? "GB" : tok); found = true; break; }
+          }
+          // Check full country name
+          if (!found && COUNTRY_NAMES[last]) { countries.add(COUNTRY_NAMES[last]); found = true; }
+        }
+      }
+      if (!found && t.organizer?.flag) {
+        // Flag is like "us", "de", "us-mo" — take first 2 chars as country
+        const code = t.organizer.flag.substring(0, 2).toUpperCase();
+        if (COUNTRY_CODES.has(code)) countries.add(code);
       }
     }
     return countries.size;
