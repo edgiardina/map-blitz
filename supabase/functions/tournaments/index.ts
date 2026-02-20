@@ -17,7 +17,6 @@ async function fetchAllPagesFromMatchplay(apiToken: string): Promise<unknown[]> 
   do {
     const params = new URLSearchParams({
       status: 'started',
-      includePlayers: '1',
       per_page: '100',
       page: String(page),
     });
