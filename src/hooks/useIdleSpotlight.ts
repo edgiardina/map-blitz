@@ -210,7 +210,6 @@ export function useIdleSpotlight(
   tournaments: TournamentWithCoords[],
   isActive: boolean,
   onFocusTournament: (id: number, lat: number, lng: number) => void,
-  onResetView: () => void,
 ) {
   const [spotlight, setSpotlight] = useState<SpotlightPlayer | null>(null);
   const [progress, setProgress] = useState(0); // 0–100
@@ -259,7 +258,6 @@ export function useIdleSpotlight(
       clearTimers();
       setSpotlight(null);
       setProgress(0);
-      onResetView();
       return;
     }
 
@@ -280,7 +278,7 @@ export function useIdleSpotlight(
     }, CYCLE_DURATION_MS);
 
     return clearTimers;
-  }, [isActive, tournaments, runCycle, clearTimers, onResetView]);
+  }, [isActive, tournaments, runCycle, clearTimers]);
 
   return { spotlight, progress };
 }
