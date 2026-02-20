@@ -29,17 +29,18 @@ async function fetchUserProfile(userId: number) {
 }
 
 async function fetchIfpaAvatar(ifpaId: number): Promise<string | null> {
+  // IFPA profile images follow a known URL pattern
+  const url = `https://www.ifpapinball.com/images/profiles/players/${ifpaId}.jpg`;
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/ifpa-proxy?ifpaId=${ifpaId}`,
-      { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const photo = data?.player?.profile_photo;
-    // IFPA returns a placeholder URL when no real photo exists
-    if (photo && !photo.includes('blank.png') && !photo.includes('no_image')) return photo;
-    return null;
+    // Verify the image actually exists with a HEAD-like check via image preload
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(url);
+      img.onerror = () => resolve(null);
+      img.src = url;
+      // Timeout after 3 seconds
+      setTimeout(() => resolve(null), 3000);
+    });
   } catch {
     return null;
   }
