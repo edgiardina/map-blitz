@@ -14,15 +14,6 @@ const Index = () => {
   const [idleMode, setIdleMode] = useState(false);
   const mapRef = useRef<TournamentMapHandle>(null);
 
-  const selectedTournament = useMemo(
-    () => tournaments.find(t => t.tournamentId === selectedId) ?? null,
-    [tournaments, selectedId]
-  );
-
-  const { details, isLoading: detailsLoading } = useTournamentDetails(
-    idleMode ? null : selectedId
-  );
-
   const handleSelect = useCallback((id: number) => {
     setSelectedId(id);
     const t = tournaments.find(t => t.tournamentId === id);
@@ -51,6 +42,18 @@ const Index = () => {
     handleFocusTournament,
     handleResetView,
   );
+
+  // Resolve which tournament to show details for (selected or spotlighted)
+  const activeTournamentId = idleMode
+    ? (spotlight?.tournament?.tournamentId ?? null)
+    : selectedId;
+
+  const selectedTournament = useMemo(
+    () => tournaments.find(t => t.tournamentId === activeTournamentId) ?? null,
+    [tournaments, activeTournamentId]
+  );
+
+  const { details, isLoading: detailsLoading } = useTournamentDetails(activeTournamentId);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
@@ -87,13 +90,13 @@ const Index = () => {
           </button>
         )}
 
-        {/* Tournament detail panel */}
-        {selectedId !== null && !idleMode && selectedTournament && details && (
+        {/* Tournament detail panel — shown both when selected and during spotlight */}
+        {selectedTournament && details && (
           <TournamentDetailPanel
             tournament={selectedTournament}
             details={details}
             isLoading={detailsLoading}
-            onClose={handleResetView}
+            onClose={idleMode ? () => setIdleMode(false) : handleResetView}
           />
         )}
 
