@@ -84,58 +84,22 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 async function fetchAllPages(): Promise<Tournament[]> {
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  // Build dateInterval: Matchplay's "today" window is 05:00 UTC → 04:59:59 UTC next day.
-  // If we're between midnight and 05:00 UTC, we're still in the previous day's window.
-  const now = new Date();
-  const anchorDate = new Date(now);
-  if (now.getUTCHours() < 5) {
-    anchorDate.setUTCDate(anchorDate.getUTCDate() - 1);
+  const response = await fetch(
+    `${API_BASE_URL}/tournaments`,
+    {
+      headers: {
+        'apikey': apiKey,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tournaments: ${response.status}`);
   }
-  const start = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth(), anchorDate.getUTCDate(), 5, 0, 0, 0));
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
-  const dateInterval = `${start.toISOString()};${end.toISOString()}`;
 
-  let allTournaments: Tournament[] = [];
-  let page = 1;
-  let lastPage = 1;
-
-  do {
-    const params = new URLSearchParams({
-      endpoint: 'tournaments',
-      status: 'started',
-      dateInterval,
-      sortAsc: 'true',
-      perPage: '100',
-      page: String(page),
-    });
-
-    const response = await fetch(
-      `${API_BASE_URL}/matchplay-proxy?${params.toString()}`,
-      {
-        headers: {
-          'apikey': apiKey,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch tournaments: ${response.status}`);
-    }
-
-    const json = await response.json();
-    const tournaments: Tournament[] = json?.data || [];
-    allTournaments = allTournaments.concat(tournaments);
-
-    // Get pagination info
-    if (json?.meta?.last_page) {
-      lastPage = json.meta.last_page;
-    }
-
-    page++;
-  } while (page <= lastPage);
-
-  return allTournaments;
+  const json = await response.json();
+  return json?.data || [];
 }
 
 export async function fetchTournaments(): Promise<TournamentWithCoords[]> {
