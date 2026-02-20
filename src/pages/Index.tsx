@@ -34,14 +34,19 @@ const Index = () => {
   }, []);
 
   const handleToggleIdle = () => {
-    setIdleMode(prev => !prev);
+    setIdleMode(prev => {
+      if (prev) {
+        // Exiting idle mode via toggle — reset view
+        handleResetView();
+      }
+      return !prev;
+    });
   };
 
   const { spotlight, progress } = useIdleSpotlight(
     tournaments,
     idleMode,
     handleFocusTournament,
-    handleResetView,
   );
 
   // Resolve which tournament to show details for (selected or spotlighted)
