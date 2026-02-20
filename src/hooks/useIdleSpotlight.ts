@@ -28,6 +28,23 @@ async function fetchUserProfile(userId: number) {
   return userRes.json();
 }
 
+async function fetchIfpaAvatar(ifpaId: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/ifpa-proxy?ifpaId=${ifpaId}`,
+      { headers: { apikey: apiKey, 'Content-Type': 'application/json' } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const photo = data?.player?.profile_photo;
+    // IFPA returns a placeholder URL when no real photo exists
+    if (photo && !photo.includes('blank.png') && !photo.includes('no_image')) return photo;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function scorePlayer(avatar: string | null, worldRank: number | null): number {
   let score = 0;
   if (avatar) score += 100;                          // strong bonus for having a picture
@@ -101,24 +118,33 @@ async function fetchTournamentTopPlayer(tournament: TournamentWithCoords): Promi
       })
     );
 
-    // Score each candidate and pick the best
-    const scored = profiles.map(({ player, userJson }) => {
-      const avatar = userJson?.user?.avatar ?? null;
-      const ifpa = userJson?.ifpa;
-      const worldRank: number | null = ifpa?.rank ?? null;
-      const countryRank: number | null = ifpa?.countryRank ?? null;
-      const stateRank: number | null = ifpa?.stateRank ?? null;
-      const country: string | null = ifpa?.countryCode ?? userJson?.user?.flag ?? null;
-      return {
-        player,
-        avatar,
-        worldRank,
-        countryRank,
-        stateRank,
-        country,
-        score: scorePlayer(avatar, worldRank),
-      };
-    });
+    // Score each candidate, fetching IFPA avatar as fallback
+    const scored = await Promise.all(
+      profiles.map(async ({ player, userJson }) => {
+        let avatar: string | null = userJson?.user?.avatar ?? null;
+        const ifpa = userJson?.ifpa;
+        const worldRank: number | null = ifpa?.rank ?? null;
+        const countryRank: number | null = ifpa?.countryRank ?? null;
+        const stateRank: number | null = ifpa?.stateRank ?? null;
+        const country: string | null = ifpa?.countryCode ?? userJson?.user?.flag ?? null;
+
+        // Fallback: fetch IFPA profile photo if no Matchplay avatar
+        if (!avatar && (player.ifpaId || ifpa?.ifpaId)) {
+          const id = player.ifpaId || ifpa?.ifpaId;
+          avatar = await fetchIfpaAvatar(id);
+        }
+
+        return {
+          player,
+          avatar,
+          worldRank,
+          countryRank,
+          stateRank,
+          country,
+          score: scorePlayer(avatar, worldRank),
+        };
+      })
+    );
 
     scored.sort((a, b) => b.score - a.score);
     const best = scored[0];
