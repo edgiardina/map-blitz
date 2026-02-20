@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { TournamentWithCoords } from "@/lib/matchplay";
 import { ActivityFeed } from "./ActivityFeed";
 import { TournamentCard } from "./TournamentCard";
@@ -16,6 +17,20 @@ interface SidebarProps {
 export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpdated, idleMode, onToggleIdle }: SidebarProps) {
   const active = tournaments.filter(t => t.status === "started");
   const other = tournaments.filter(t => t.status !== "started");
+  const countryCount = useMemo(() => {
+    const countries = new Set<string>();
+    for (const t of tournaments) {
+      if (t.location?.address) {
+        // Extract country code from the end of the address (e.g. ", US")
+        const parts = t.location.address.split(',');
+        const last = parts[parts.length - 1]?.trim();
+        if (last) countries.add(last);
+      } else if (t.organizer?.flag) {
+        countries.add(t.organizer.flag);
+      }
+    }
+    return countries.size;
+  }, [tournaments]);
 
   return (
     <div className="h-full flex flex-col bg-background/95 backdrop-blur-xl border-r border-border overflow-hidden">
@@ -57,8 +72,8 @@ export function Sidebar({ tournaments, selectedId, onSelect, isLoading, lastUpda
           <div className="text-[9px] text-muted-foreground tracking-wider mt-1">IN PROGRESS</div>
         </div>
         <div className="glass-panel p-3 text-center">
-          <div className="font-display text-xl font-bold neon-text-magenta">{tournaments.length}</div>
-          <div className="text-[9px] text-muted-foreground tracking-wider mt-1">TOTAL</div>
+          <div className="font-display text-xl font-bold neon-text-magenta">{countryCount}</div>
+          <div className="text-[9px] text-muted-foreground tracking-wider mt-1">COUNTRIES</div>
         </div>
       </div>
 
