@@ -16,11 +16,12 @@ const Index = () => {
 
   const handleSelect = useCallback((id: number) => {
     setSelectedId(id);
+    if (idleMode) setIdleMode(false);
     const t = tournaments.find(t => t.tournamentId === id);
     if (t) {
       mapRef.current?.focusLatLng(t.lat, t.lng);
     }
-  }, [tournaments]);
+  }, [tournaments, idleMode]);
 
   const handleResetView = useCallback(() => {
     setSelectedId(null);
