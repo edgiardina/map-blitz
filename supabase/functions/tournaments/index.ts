@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const MATCHPLAY_BASE = 'https://app.matchplay.events/api';
+const MATCHPLAY_BASE = 'https://api.matchplay.events/api';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 async function fetchAllPagesFromMatchplay(apiToken: string): Promise<unknown[]> {
