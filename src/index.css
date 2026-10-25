@@ -216,3 +216,18 @@
 .dark-popup .leaflet-popup-close-button {
   color: hsl(220 10% 55%) !important;
 }
+
+/* TV mode (?tv=1). Weak TV GPUs, such as a Fire TV Stick, repaint the whole map every frame
+   while any marker animates. Hold every animation still, and drop backdrop blur and blur
+   layers. Static glows stay: they paint once. */
+html.tv *,
+html.tv *::before,
+html.tv *::after {
+  animation: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.tv .blur-xl {
+  display: none !important;
+}
